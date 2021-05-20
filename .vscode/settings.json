@@ -1,0 +1,13 @@
+{
+    "files.associations": {
+        "*.hdb": "handlebars",
+        "*.g": "lex",
+        "list": "cpp",
+        "iostream": "cpp",
+        "fstream": "cpp",
+        "functional": "cpp",
+        "__mutex_base": "cpp",
+        "thread": "cpp"
+    },
+    "cSpell.language": "en"
+}

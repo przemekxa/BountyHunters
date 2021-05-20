@@ -1,9 +1,7 @@
-#include <mpi.h>
 #include <iostream>
+#include <mpi.h>
 
 #include "Config.hpp"
-#include "Common.hpp"
-#include "Message.hpp"
 #include "Customer.hpp"
 #include "Hunter.hpp"
 
@@ -15,6 +13,26 @@ int main(int argc, char** argv) {
     MPI_Init(&argc, &argv);
     MPI_Comm_size(MPI_COMM_WORLD, &threads);
     MPI_Comm_rank(MPI_COMM_WORLD, &tid);
+    
+    /*
+
+        `mpirun -np 3 main`
+
+        Current settings:
+        - One Customer
+        - Two Hunters
+
+        So thread identifiers:
+        - 0 - Customer
+        - 1 - Hunter
+        - 2 - Hunter
+
+        So:
+        - hunterMin = 1
+        - hunterMax = 2
+
+        TODO: Read config from file
+    */
 
     Config config {
         .shopSize = 1,

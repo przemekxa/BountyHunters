@@ -21,6 +21,8 @@ namespace Tag {
     const int StoreRequestAck = 105;
 }
 
+
+
 struct Order {
     int64_t customer;
     uint64_t lamport;
@@ -122,10 +124,6 @@ struct OrderRequestAck {
     }
 };
 
-struct StoreRequest {
-    uint64_t lamport;
-};
-
 struct StoreRequestAck {
     uint64_t requestLamport;
     uint64_t lamport;
@@ -144,6 +142,14 @@ struct StoreRequestAck {
 
         return orderType;
     }
+};
+
+struct Datatype {
+    MPI_Datatype order = Order::datatype();
+    MPI_Datatype orderCompletion = OrderCompletion::datatype();
+    MPI_Datatype orderRequest = OrderRequest::datatype();
+    MPI_Datatype orderRequestAck = OrderRequestAck::datatype();
+    MPI_Datatype storeRequestAck = StoreRequestAck::datatype();
 };
 
 #endif

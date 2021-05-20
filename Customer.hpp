@@ -11,99 +11,44 @@
 class Customer: Loggable {
 private:
 
-    // Configuration
-
     // Identifier of the Customer
-    int64_t id;
+    const int64_t id;
 
-    Config config;
+    // Configuration of the program
+    const Config config;
 
-    // Datatype of the `Order`
-    MPI_Datatype orderType;
+    // Datatypes used by the MPI
+    const Datatype types;
 
-    // Datatype of the `OrderCompletion`
-    MPI_Datatype orderCompletionType;
-
-    Logger logger;
+    // Logger which prints Lamport values
+    const Logger logger;
 
     // State
 
+    // Lamport clock
     uint64_t lamport = 0;
+
+    // List of uncompleted orders
     list<Order> orders;
+
+    // Status used by the MPI_Recv
     MPI_Status status;
 
-public:
-
-    uint64_t getLamport() {
-        return lamport;
-    }
-
     // Place a new order
-    void makeOrder() {
+    void makeOrder();
 
-        lamport += 1;
-
-        // Create new order and place it on the list
-        auto& newOrder = orders.emplace_back(id, lamport);
-
-        //printf("[%lld] %05llu: Placing new Order(%lld, %llu)\n", id, lamport, id, lamport);
-        logger.log() << "Placing Order(" << id << ", " << lamport << ")\n";
-
-        // Send a new order to all the hunters
-        for(int i = config.hunterMin; i <= config.hunterMax; i++) {
-            lamport += 1;
-            MPI_Send(&newOrder, 1, orderType, i, Tag::Order, MPI_COMM_WORLD);
-        }
-
-    }
-
-    // Receive order from a Hunter
-    void receiveOrderCompletion() {
-        OrderCompletion receivedOrder;
-
-        MPI_Recv(
-            &receivedOrder,
-            1,
-            orderCompletionType,
-            MPI_ANY_SOURCE,
-            Tag::OrderCompletion,
-            MPI_COMM_WORLD,
-            &status);
-
-        logger.log() << "✅ Received OrderCompletion("
-            << receivedOrder.customer << ", "
-            << receivedOrder.orderLamport << ", "
-            << receivedOrder.lamport << ") from " << status.MPI_SOURCE << "\n";
-
-        // Increment the lamport clock
-        lamport = max(lamport, receivedOrder.lamport) + 1;
-
-        // Remove the order from the list
-        orders.remove_if([&receivedOrder](const Order& order) {
-            return 
-                order.customer == receivedOrder.customer &&
-                order.lamport == receivedOrder.orderLamport;
-        });
-    }
+    // Receive order from a Hunter (blocks the thread)
+    void receiveOrderCompletion();
 
 public:
 
-    Customer(int id, Config config) : logger(this, id, 'C'), config(config) {
-        this->id = (int64_t)id;
-        this->orderType = Order::datatype();
-        this->orderCompletionType = OrderCompletion::datatype();
-    };
+    Customer(int64_t id, const Config& config);
 
-    void loop() {
-        while(true) {
-            while(orders.size() < config.maxOrders) {
-                makeOrder();
-            }
-            while(orders.size() > config.minOrders) {
-                receiveOrderCompletion();
-            }
-        }
-    }
+    // Return the current lamport value
+    uint64_t getLamport() override;
+
+    // Main loop
+    void loop();
 
 };
 

@@ -22,9 +22,9 @@ private:
 public:
 
     Logger(Loggable* object, int64_t id, char type, ostream& stream = cout) :
-        object(object), id(id), type(type), stream(stream) { }
+        id(id), type(type), stream(stream), object(object) { }
 
-    Logger& log() {
+    const Logger& log() const {
         stream
             << type
             << " [" << setfill('0') << setw(2) << id << "] "
@@ -34,7 +34,7 @@ public:
     }
 
     template <typename T>
-    Logger& operator<< (const T& data) {
+    const Logger& operator<< (const T& data) const {
         stream << data;
         return *this;
     }

@@ -35,7 +35,7 @@ private:
     MPI_Status status;
 
     // Place a new order
-    void makeOrder();
+    void placeOrder();
 
     // Receive order from a Hunter (blocks the thread)
     void receiveOrderCompletion();

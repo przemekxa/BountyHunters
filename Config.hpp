@@ -2,7 +2,6 @@
 #define CONFIG_HPP
 
 #include <iostream>
-#include <charconv>
 #include <fstream>
 
 using namespace std;
@@ -36,44 +35,53 @@ struct Config {
 	// The maximal time a Hunter will spend on a mission (in seconds)
     uint8_t missionWaitMax = 10;
 
-	// // Set a value by field name
-	// void set(string_view key, string_view value) {
+	// Set a value by field name
+	void set(string_view key, string_view value) {
 
-	// 	// Convert string_view to uint8_t
-	// 	uint8_t intValue;
-	// 	auto result = from_chars(value.begin(), value.end(), intValue);
-	// 	if(result.ec != errc()) { return; }
+		// Convert string_view to uint8_t
+		int64_t intValue;
+		try {
+			string stringValue(value);
+			intValue = stoi(stringValue);
+		} catch (...) {
+			return;
+		}
 
-	// 	if(key == "shopSize") {
-	// 		shopSize = intValue;
-	// 	} else if(key == "minOrders") {
-	// 		minOrders = intValue;
-	// 	} else if(key == "maxOrders") {
-	// 		maxOrders = intValue;
-	// 	}
-	// }
+		if(key == "shopSize") {
+			shopSize = intValue;
+		} else if(key == "minOrders") {
+			minOrders = intValue;
+		} else if(key == "maxOrders") {
+			maxOrders = intValue;
+		} else if(key == "hunterMin") {
+			hunterMin = intValue;
+		} else if(key == "hunterMax") {
+			hunterMax = intValue;
+		} else if(key == "storeWaitMin") {
+			storeWaitMin = intValue;
+		} else if(key == "storeWaitMax") {
+			storeWaitMax = intValue;
+		} else if(key == "missionWaitMin") {
+			missionWaitMin = intValue;
+		} else if(key == "missionWaitMax") {
+			missionWaitMax = intValue;
+		}
+	}
 
-	// // Load config from file
-	// static Config fromFile(const char* filename = "config.ini") {
-	// 	Config config;
-	// 	ifstream file(filename);
-	// 	if(file.good()) {
-	// 		string line;
-	// 		line.reserve(64);
-	// 		while(getline(file, line)) {
-	// 			if(line.empty() || line[0] == '#') continue;
-	// 			string_view view { line };
-	// 			size_t delimeter = view.find_first_of('=');
-	// 			if(delimeter == string::npos) continue;
-	// 			string_view key = view.substr(0, delimeter);
-	// 			string_view value = view.substr(delimeter + 1);
-	// 			config.set(key, value);
-	// 		}
-	// 	}
-	// 	file.close();
+	// Load config from launch arguments
+	static Config fromArgs(const int argc, char** argv) {
+		Config config;
+		for(int i = 1; i < argc; i++) {
+			string_view view(argv[i]);
+			size_t delimeter = view.find_first_of('=');
+			if(delimeter == string::npos) continue;
+			string_view key = view.substr(0, delimeter);
+			string_view value = view.substr(delimeter + 1);
+			config.set(key, value);
+		}
 
-	// 	return config;
-	// }
+		return config;
+	}
 };
 
 #endif

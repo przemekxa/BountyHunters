@@ -5,8 +5,10 @@
 #include <list>
 #include <unordered_map>
 #include <mutex>
+#include <condition_variable>
 #include <random>
 #include <thread>
+#include <algorithm>
 #include <mpi.h>
 
 #include <unistd.h>
@@ -49,7 +51,7 @@ private:
     mutex stateMutex;
 
     // Lamport value (Do not use directly!)
-    atomic<uint64_t> lamport = 0;
+    uint64_t lamport = 0;
     mutex lamportMutex;
 
     // Pending orders

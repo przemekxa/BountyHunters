@@ -4,7 +4,7 @@ Customer::Customer(int64_t id, const Config& config) :
     id(id),
     config(config),
     types(),
-    logger(this, id, 'C')
+    logger(this, id, "C")
     { };
 
 uint64_t Customer::getLamport() {
@@ -14,24 +14,25 @@ uint64_t Customer::getLamport() {
 void Customer::loop() {
     while(true) {
         while(orders.size() < config.maxOrders) {
-            makeOrder();
+            placeOrder();
         }
+        logger() << "Reached the limit of not completed orders, waiting for completions\n";
         while(orders.size() > config.minOrders) {
             receiveOrderCompletion();
         }
+        logger() << "Fell below the lower limit of not completed orders, placing new orders...\n";
     }
 }
 
 // Place a new order
-void Customer::makeOrder() {
+void Customer::placeOrder() {
 
     lamport += 1;
 
     // Create new order and place it on the list
     auto& newOrder = orders.emplace_back(id, lamport);
 
-    //printf("[%lld] %05llu: Placing new Order(%lld, %llu)\n", id, lamport, id, lamport);
-    logger.log() << "Placing Order(" << id << ", " << lamport << ")\n";
+    logger() << "📤 Placing " << newOrder << "\n";
 
     // Send a new order to all the hunters
     for(int i = config.hunterMin; i <= config.hunterMax; i++) {
@@ -43,10 +44,10 @@ void Customer::makeOrder() {
 
 // Receive order from a Hunter
 void Customer::receiveOrderCompletion() {
-    OrderCompletion receivedOrder;
+    OrderCompletion completion;
 
     MPI_Recv(
-        &receivedOrder,
+        &completion,
         1,
         types.orderCompletion,
         MPI_ANY_SOURCE,
@@ -54,19 +55,16 @@ void Customer::receiveOrderCompletion() {
         MPI_COMM_WORLD,
         &status);
 
-    logger.log() << "✅ Received OrderCompletion("
-        << receivedOrder.customer << ", "
-        << receivedOrder.orderLamport << ", "
-        << receivedOrder.lamport << ") from " << status.MPI_SOURCE << "\n";
-
     // Increment the lamport clock
-    lamport = max(lamport, receivedOrder.lamport) + 1;
+    lamport = max(lamport, completion.lamport) + 1;
+
+    logger() << "✅ Received " << completion << " from " << status.MPI_SOURCE << "\n";
 
     // Remove the order from the list
-    orders.remove_if([&receivedOrder](const Order& order) {
+    orders.remove_if([&completion](const Order& order) {
         return 
-            order.customer == receivedOrder.customer &&
-            order.lamport == receivedOrder.orderLamport;
+            order.customer == completion.customer &&
+            order.lamport == completion.orderLamport;
     });
 
 }

@@ -4,7 +4,7 @@ Customer::Customer(int64_t id, const Config& config) :
     id(id),
     config(config),
     types(),
-    logger(this, id, "C")
+    logger(this, id, "C ")
     { };
 
 uint64_t Customer::getLamport() {
@@ -36,7 +36,6 @@ void Customer::placeOrder() {
 
     // Send a new order to all the hunters
     for(int i = config.hunterMin; i <= config.hunterMax; i++) {
-        lamport += 1;
         MPI_Send(&newOrder, 1, types.order, i, Tag::Order, MPI_COMM_WORLD);
     }
 

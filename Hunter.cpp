@@ -4,7 +4,7 @@ Hunter::Hunter(int64_t id, const Config& config) :
     id(id),
     config(config),
     types(),
-    logger(this, id, "H")
+    logger(this, id, " H")
     { }
 
 uint64_t Hunter::getLamport() {
@@ -46,8 +46,8 @@ void Hunter::handleOrder() {
         logger() <<  "Received " << order << " - ";
 
         // If the order is rejected - remove from the list fo rejected
-        if(auto it = find(orders.begin(), orders.end(), order); it != orders.end()) {
-            orders.erase(it);
+        if(auto it = find(rejected.begin(), rejected.end(), order); it != rejected.end()) {
+            rejected.erase(it);
             logger << "removing from rejected list\n";
         } else {
             // Add the order to the list
@@ -119,7 +119,7 @@ void Hunter::handleOrderRequest() {
             Order order { ack.orderCustomer, ack.orderLamport };
             if(auto it = find(orders.begin(), orders.end(), order); it != orders.end()) {
                 orders.erase(it);
-            } else {
+            } else if (find(rejected.begin(), rejected.end(), order) == rejected.end()) {
                 rejected.push_back(order);
             }
         }
@@ -278,10 +278,10 @@ void Hunter::loopForeground() {
             gettingOrderGotOrder = false;
             incrementLamport();
 
-            logger() << "Trying to get Order(customer = " << orders.front() << "\n";
+            logger() << "Trying to get " << orders.front() << "\n";
 
             // Send a request to the other Hunters
-            OrderRequest orderRequest { orders.front().customer, orders.front().lamport, lastOrderLamport };
+            OrderRequest orderRequest { orders.front().customer, orders.front().lamport, lastOrderLamport, getLamport() };
             for(int i = config.hunterMin; i <= config.hunterMax; i++) {
                 if(i == id) continue;
                 MPI_Send(&orderRequest, 1, types.orderRequest, i, Tag::OrderRequest, MPI_COMM_WORLD);
@@ -304,20 +304,19 @@ void Hunter::loopForeground() {
 
             // STATE: getting store
 
+            incrementLamport();
             state = HunterState::GettingStore;
-            uint64_t requestLamport = getLamport();
-            waitingForStoreLamport = requestLamport;
+            waitingForStoreLamport = getLamport();
             waitingForStoreRemaining = config.hunterMax - config.hunterMin + 1 - config.shopSize;
             waitingForStoreHunters.clear();
-            incrementLamport();
+            
 
             logger() << "Trying to get into the store\n";
 
             // Send request to all the Hunters
             for(int i = config.hunterMin; i <= config.hunterMax; i++) {
                 if(i == id) continue;
-                MPI_Send(&requestLamport, 1, MPI_UINT64_T, i, Tag::StoreRequest, MPI_COMM_WORLD);
-                incrementLamport();
+                MPI_Send(&waitingForStoreLamport, 1, MPI_UINT64_T, i, Tag::StoreRequest, MPI_COMM_WORLD);
             }
             logger() << "Store request to other Hunters sent, waiting...\n";
 
@@ -353,7 +352,6 @@ void Hunter::loopForeground() {
                     hunter,
                     Tag::StoreRequestAck,
                     MPI_COMM_WORLD);
-                incrementLamport();
             }
             waitingForStoreHunters.clear();
             logger() << "Send ACK to everyone on the store waiting list\n";
@@ -376,7 +374,9 @@ void Hunter::loopForeground() {
             incrementLamport();
             logger() << "Mission finished\n";
 
+            
             // Send order completion to the Customer
+            incrementLamport();
             OrderCompletion completion { orders.front().customer, orders.front().lamport, getLamport() };
             MPI_Send(&completion,
                 1,
@@ -384,11 +384,10 @@ void Hunter::loopForeground() {
                 orders.front().customer,
                 Tag::OrderCompletion,
                 MPI_COMM_WORLD);
-            incrementLamport();
+            
             logger() << "Sent " << completion << "\n";
 
             orders.pop_front();
-            incrementLamport();
         }
 
         //logger() << "--> LOOP DONE \n";

@@ -14,7 +14,7 @@ struct Config {
 	// The lower bound of pending orders (LM)
 	uint8_t minOrders = 2;
 
-	// The upper bound of pending orders (LM)
+	// The upper bound of pending orders (HM)
 	uint8_t maxOrders = 5;
 
 	// The lowest identifier of a Hunter
